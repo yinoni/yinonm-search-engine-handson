@@ -1,13 +1,16 @@
 package com.handson.searchengine.kafka;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.handson.searchengine.crawler.Crawler;
+import com.handson.searchengine.model.CrawlerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.Optional;
 
 import static com.handson.searchengine.kafka.Producer.APP_TOPIC;
@@ -17,16 +20,24 @@ import static com.handson.searchengine.kafka.Producer.APP_TOPIC;
 public class Consumer {
 
 
+    @Autowired
+    Crawler crawler;
+
+    @Autowired
+    ObjectMapper om;
+
     @KafkaListener(topics = {APP_TOPIC})
-    public void listen(ConsumerRecord<?, ?> record){
+    public void listen(ConsumerRecord<?, ?> record) throws IOException, InterruptedException {
 
         Optional<?> kafkaMessage = Optional.ofNullable(record.value());
 
-        if (kafkaMessage.isPresent()) {
+        CrawlerRecord rec;
 
+        if (kafkaMessage.isPresent()) {
             Object message = kafkaMessage.get();
-            System.out.println("---->" + record);
-            System.out.println("---->" + message);
+            rec =  om.readValue(message.toString(), CrawlerRecord.class);
+
+            crawler.crawlOneRecord(rec);
 
         }
     }
